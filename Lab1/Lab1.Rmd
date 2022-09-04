@@ -1,0 +1,84 @@
+---
+title: 'Lab 1: Intro to R'
+author: "Avery Davidowitz"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(openintro)
+```
+
+### Exercise 1
+
+```{r view-girls-counts}
+arbuthnot$girls
+```
+
+### Exercise 2
+
+Excluding a period of sharp decline centered around 1645 the number of girls baptized shows a steady slow increase as shown in the plot below.
+
+```{r trend-girls}
+ggplot(data = arbuthnot, aes(x = year, y = girls)) + 
+  geom_line()
+```
+
+### Exercise 3
+
+The proportion of boys born over time is consistently higher than girls. Generally it vacillates between .5 and 3.5 percent higher than girls born as shown in the plot below.
+
+```{r plot-prop-boys-arbuthnot}
+arbuthnot <- arbuthnot %>%
+  mutate(total = boys + girls)
+arbuthnot <- arbuthnot %>%
+  mutate(percent_diff = 100 * abs(boys - girls) / total / 2)
+ggplot(data = arbuthnot, aes(x = year, y = percent_diff)) + 
+  geom_point()
+```
+
+### Exercise 4
+
+The data frame is 82 rows by 3 columns: year, boys and girls. The year spans from 1940 to 2002.
+
+```{r dim-present}
+glimpse(present)
+present %>%
+  summarize(min = min(year), max = max(year))
+```
+
+### Exercise 5
+
+As demonstrated by the average total number of children counted in a given year in each data frame, the US births were over 300 times higher than the London births.
+
+```{r count-compare}
+present <- present %>%
+  mutate(total = boys + girls)
+present %>%
+  summarize(average = mean(total))
+arbuthnot %>%
+  summarize(average = mean(total))
+```
+
+### Exercise 6
+
+Similar to the Arbuthnot data frame, boys are consistently born more commonly. However, in this data the difference in representation is noticeably less spread and stays between a 1% and 1.5% difference.
+
+```{r plot-prop-boys-present}
+present <- present %>%
+  mutate(total = boys + girls)
+present <- present %>%
+  mutate(percent_diff = 100 * abs(boys - girls) / total / 2)
+ggplot(data = present, aes(x = year, y = percent_diff)) + 
+  geom_point()
+```
+
+### Exercise 7
+
+1961 saw the most total births in the US between 1940 and 2002.
+
+```{r find-max-total}
+present %>%
+  arrange(desc(total))
+```
