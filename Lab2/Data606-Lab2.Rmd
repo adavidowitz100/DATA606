@@ -1,0 +1,93 @@
+---
+title: "Data606_Lab2"
+author: "Avery Davidowitz"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## Import packages
+
+```{r warning=FALSE, message=FALSE}
+library(tidyverse)
+library(openintro)
+
+data(nycflights)
+```
+
+## Exercise 1
+
+The 3 histograms all differ in the bin width. The bin width of 15 shows the most insightful view of the delay data. The standard bin width overstates the drop off after the second bin when in reality the step down in delay is much smoother. Alternatively, the bin width of 150 gives the illusion that the first 2 bins are of significance and everything else is an outlier.
+
+## Exercise 2
+There are 68 flights from NYC to SFO in February.
+```{r}
+sfo_feb_flights <- nycflights %>%
+  dplyr::filter(dest == "SFO", month == 2)
+glimpse(sfo_feb_flights)
+```
+## Exercise 3
+The median and IQR are useful to summarize the San Francisco arrival delay data due to their robust properties. The arrival delays are strongly centered around the median and using the mean and SD to summarize the delays would skew in favor of the relatively few outliers.
+```{r}
+sfo_feb_flights %>%
+  ggplot(aes(x = arr_delay)) +
+  geom_histogram(binwidth = 15)
+sfo_feb_flights %>%
+  summarise(median_ad = median(arr_delay), iqr_ad = IQR(arr_delay), n_flights = n(), max_ad = max(arr_delay))
+```
+## Exercise 4
+Delta and United were tied with the highest IQR representing the highest spread in arrival delays to San Francisco during February. However, despite the high variability they both had an early arrival as indicated by the negative value of the median arrival delays. 
+
+```{r}
+sfo_feb_flights %>%
+  group_by(carrier) %>%
+  summarise(median_ad = median(arr_delay), iqr_ad = IQR(arr_delay), n_flights = n()) %>%
+  arrange(desc(iqr_ad))
+  
+```
+
+## Exercise 5
+Choosing which summary stats to help decide your month of departure would be a personal choice. Neither is strictly correct. If you personally prefer to know what typical delays to expect, you should consider the median. If you want to avoid the possibility of long delays then you may want to consider outliers and worst case scenarios. Since planes may leave a little early but not hours early unlike delays, a significantly higher mean may be indicative of a few nightmare delays. Personally, if I had a connecting flight I would use the mean. Otherwise, I would use the median.
+
+## Exercise 6
+I would choose to fly out of LaGuardia airport because that has the best on-time departure rate.
+```{r}
+nycflights <- nycflights %>%
+  mutate(dep_type = ifelse(dep_delay < 5, "on time", "delayed"))
+nycflights %>%
+  group_by(origin) %>%
+  summarise(ot_dep_rate = sum(dep_type == "on time") / n()) %>%
+  arrange(desc(ot_dep_rate))
+```
+## Exercise 7
+Average speed added as a column in the data frame in mph
+```{r}
+nycflights <- nycflights %>%
+  mutate(avg_speed = as.integer(distance * 60 /air_time))
+glimpse(nycflights)
+```
+## Exercise 8
+There seems to be a correlation between the distance of a flight and the average speed. Perhaps this can simply be explained by planes needing to accelerate and decelerate for take off and landing which skews the mean flight speed. This impacts the overall flight speed less at longer distances because these take of and landing requirements are not proportional to the flight distance. Considering that, the relationship does not look linear except when plotted with a log-log scale which supports this view.
+```{r}
+ggplot(data = nycflights, aes(x = distance, y = avg_speed)) + 
+  geom_point()
+
+ggplot(data = nycflights, aes(x = log(distance), y = log(avg_speed))) + 
+  geom_point()
+```
+
+## Exercise 9
+
+The flight would have to leave early to expect to arrive early. Once a flight leaves on-time, you are more likely to be delayed on arrival than not considering the scatter plot below.
+
+```{r}
+ADU_flights <- nycflights %>%
+  dplyr::filter(carrier %in% c("AA", "DL", "UA"))
+
+ADU_delay_plot <- ggplot(ADU_flights, aes(x=dep_delay, y=arr_delay))
+ADU_delay_plot <- ADU_delay_plot + geom_point(aes(color=factor(carrier), group=carrier))
+ADU_delay_plot <- ADU_delay_plot + scale_color_discrete(name="Carrier")
+ADU_delay_plot <- ADU_delay_plot + labs(title="Departure and Arrival Delays", x="Departure Delay", y="Arrival Delay")
+ADU_delay_plot
+```
