@@ -7,8 +7,8 @@ output:
   html_document: default
 ---
 
-```{r setup, message=FALSE, warning=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(eval = TRUE, message = FALSE, warning = FALSE)
 ```
 
 ## Load Packages and set seed
