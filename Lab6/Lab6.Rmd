@@ -1,0 +1,152 @@
+---
+title: "Data 606 Lab 6 - Inference for categorical data"
+author: "Avery Davidowitz"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Load Packages
+
+
+```{r cars}
+library(tidyverse)
+library(openintro)
+library(infer)
+```
+
+Data set
+```{r}
+data('yrbss', package='openintro')
+head(yrbss)
+```
+
+## Exercise 1
+The counts within each category for the amount of days these students have texted while driving within the past 30 days.
+```{r}
+texting_counts <- yrbss |> dplyr::filter(!is.na(text_while_driving_30d)) |> count(text_while_driving_30d)
+
+texting_counts
+```
+
+## Exercise 2
+The proportion of people who have texted while driving every day in the past 30 days and never wear helmets.
+
+```{r}
+never_helm_always_text <- yrbss |> dplyr::filter(text_while_driving_30d == "30" & helmet_12m == "never") |> nrow()
+never_helm_always_text_prop <- never_helm_always_text / nrow(yrbss)
+never_helm_always_text_prop
+```
+
+
+```{r}
+no_helmet <- yrbss %>%
+  filter(helmet_12m == "never")
+no_helmet <- no_helmet %>%
+  mutate(text_ind = ifelse(text_while_driving_30d == "30", "yes", "no"))
+no_helmet <- no_helmet |> filter(!is.na(text_ind)) # I was getting errors without removing NAs
+no_helmet %>%
+  specify(response = text_ind, success = "yes") %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "prop") %>%
+  get_ci(level = 0.95)
+```
+
+## Exercise 3
+The margin of error for the estimate of the proportion of non-helmet wearers that have texted while driving each day for the past 30 days based on this survey.
+```{r}
+margin_error <- 1.96 * (never_helm_always_text_prop * (1 - never_helm_always_text_prop) / nrow(yrbss))^(1/2)
+margin_error
+```
+
+## Exercise 4
+Calculated confidence intervals for two other categorical variables.
+```{r}
+hispanic_pop_ci <- yrbss |> filter(!is.na(hispanic)) %>%
+  specify(response = hispanic, success = "hispanic") %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "prop") %>%
+  get_ci(level = 0.95)
+hispanic_pop_ci
+```
+I can claim with 95% confidence that the true Hispanic proportion of the general population of teens is between 24.9% and 26.4%. 
+```{r}
+gender_ci <- yrbss |> filter(!is.na(gender)) |>
+  specify(response = gender, success = "female") %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "prop") %>%
+  get_ci(level = 0.95)
+gender_ci
+```
+I can claim with 95% confidence that the true female proportion of the general population of teens is between 47.9% and 49.6%.
+
+## Exercise 5
+
+The margin of error is the largest when p = .5 and the smallest when p approaches 0 and 1. However, when p is very small or very large it may be difficult to obtain a large enough sample to satisfy the success-failure conditions needed to use a normal distribution.
+
+```{r}
+n <- 1000
+p <- seq(from = 0, to = 1, by = 0.01)
+me <- 2 * sqrt(p * (1 - p)/n)
+dd <- data.frame(p = p, me = me)
+ggplot(data = dd, aes(x = p, y = me)) + 
+  geom_line() +
+  labs(x = "Population Proportion", y = "Margin of Error")
+```
+
+
+```{r sf-app, echo=FALSE, eval=FALSE}
+library(shiny)
+shinyApp(
+  ui = fluidPage(
+      numericInput("n", label = "Sample size:", value = 300),
+      
+      sliderInput("p", label = "Population proportion:",
+                  min = 0, max = 1, value = 0.1, step = 0.01),
+      
+      numericInput("x_min", label = "Min for x-axis:", value = 0, min = 0, max = 1),
+      numericInput("x_max", label = "Max for x-axis:", value = 1, min = 0, max = 1),
+    plotOutput('plotOutput')
+  ),
+  
+  server = function(input, output) { 
+    output$plotOutput = renderPlot({
+      pp <- data.frame(p_hat = rep(0, 5000))
+      for(i in 1:5000){
+        samp <- sample(c(TRUE, FALSE), input$n, replace = TRUE, 
+                       prob = c(input$p, 1 - input$p))
+        pp$p_hat[i] <- sum(samp == TRUE) / input$n
+      }
+      bw <- diff(range(pp$p_hat)) / 30
+      ggplot(data = pp, aes(x = p_hat)) +
+        geom_histogram(binwidth = bw) +
+        xlim(input$x_min, input$x_max) +
+        ggtitle(paste0("Distribution of p_hats, drawn from p = ", input$p, ", n = ", input$n))
+    })
+  },
+  
+  options = list(height = 500)
+)
+```
+
+## Exercise 6
+p hat is narrowly distributed around .1 with a nearly normal shape.
+
+## Exercise 7
+The distribution of p hats seem very similar for most ranges of p. p hat's distribution does seem to approximate the normal distribution the closer p is to .5. Many other ranges of values of p generate multi-modal distributions.
+## Exercise 8
+The higher the sample size the tighter the spread and the more normal shape for p hat. The distribution of p hat seems more sensitive to p than to sample size.
+
+## Exercise 9
+
+```{r}
+pop_size <- nrow(yrbss)
+sleep_over10 <- yrbss |> dplyr::filter(school_night_hours_sleep == "10+") |>
+                        dplyr::count(strength_training_7d)
+sleep_over10_size <- yrbss |> dplyr::filter(school_night_hours_sleep == "10+") |> nrow()
+yrbss |> dplyr::count(strength_training_7d)
+```
+
