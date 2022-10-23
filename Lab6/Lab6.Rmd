@@ -141,12 +141,24 @@ The distribution of p hats seem very similar for most ranges of p. p hat's distr
 The higher the sample size the tighter the spread and the more normal shape for p hat. The distribution of p hat seems more sensitive to p than to sample size.
 
 ## Exercise 9
-
+Is there convincing evidence that those who sleep 10+ hours per day are more likely to strength train every day of the week?
+I would test a H naught of p1 - p0 = 0. Where p1 is the proportion of those who sleep 10+ and strength train everyday / pop and p0 is the proportion of those who strength train everyday but do not sleep 10+ / pop.
 ```{r}
 pop_size <- nrow(yrbss)
-sleep_over10 <- yrbss |> dplyr::filter(school_night_hours_sleep == "10+") |>
+sleep_over10_strevery <- yrbss |> dplyr::filter(school_night_hours_sleep == "10+") |>
                         dplyr::count(strength_training_7d)
 sleep_over10_size <- yrbss |> dplyr::filter(school_night_hours_sleep == "10+") |> nrow()
 yrbss |> dplyr::count(strength_training_7d)
+```
+
+## Exercise 10
+Alpha represents the probability that you reject the null hypothesis incorrectly or a type 1 error. Therefore there would be a 5% chance that your statistical analysis could falsely determine a difference in the likelihood to strength train everyday given sleeping over 10+ hours.     
+
+## Exercise 11
+You can establish an upper bound on the margin of error if you solve for n using a p = q = .5 which produces the highest margin of error. ME = Z × SE -> n = :
+
+```{r}
+n <- (.5*1.96/.01)^2
+n
 ```
 
