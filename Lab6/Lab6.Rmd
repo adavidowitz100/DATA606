@@ -140,6 +140,7 @@ p hat is narrowly distributed around .1 with a nearly normal shape.
 
 ## Exercise 7
 The distribution of p hats seem very similar for most ranges of p. p hat's distribution does seem to approximate the normal distribution the closer p is to .5. Many other ranges of values of p generate multi-modal distributions.
+
 ## Exercise 8
 The higher the sample size the tighter the spread and the more normal shape for p hat. The distribution of p hat seems more sensitive to p than to sample size.
 
