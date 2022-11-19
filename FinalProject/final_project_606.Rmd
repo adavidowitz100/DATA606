@@ -1,0 +1,64 @@
+---
+title: DATA 606 Data Project Proposal
+author: Avery Davidowitz
+---
+
+### Data Preparation
+
+```{r setup, echo=TRUE, results='hide', warning=FALSE, message=FALSE}
+# load data
+
+```
+
+
+### Research question 
+
+How influential on current Covid deaths are historical vaccinations?
+
+
+
+### Cases 
+
+There are 239 cases.
+
+
+
+### Data collection 
+
+Local health organizations from countries around the world report Covid cases, deaths and vaccination data to the World Health Organization.
+
+
+
+### Type of study 
+
+The data is observational in nature.
+
+
+
+### Data Source 
+
+The data can be downloaded from the WHO at https://covid19.who.int/data
+
+
+
+
+### Dependent Variable
+
+"Deaths - newly reported in last 7 days" is a quantitative dependent variable.
+
+
+
+### Independent Variable(s)
+
+The independent variables are:
+TOTAL_VACCINATIONS_PER100,	PERSONS_VACCINATED_1PLUS_DOSE_PER100,	PERSONS_FULLY_VACCINATED_PER100,	FIRST_VACCINE_DATE,	NUMBER_VACCINES_TYPES_USED, PERSONS_BOOSTER_ADD_DOSE_PER100
+
+
+
+### Relevant summary statistics 
+
+**Provide summary statistics for each the variables. Also include appropriate visualizations related to your research question (e.g. scatter plot, boxplots, etc). This step requires the use of R, hence a code chunk is provided below. Insert more code chunks as needed.**
+
+```{r}
+
+```
