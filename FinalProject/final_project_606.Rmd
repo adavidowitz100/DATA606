@@ -1,13 +1,18 @@
 ---
-title: DATA 606 Data Project Proposal
-author: Avery Davidowitz
+title: "DATA 606 Data Project Proposal"
+author: "Avery Davidowitz"
+output: pdf_document
 ---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
 
 ## Import Libraries
 
 ```{r}
 library(tidyverse)
-library(GGally)
+
 ```
 
 
@@ -15,49 +20,46 @@ library(GGally)
 
 ```{r}
 # load data
-url1 <- "https://raw.githubusercontent.com/adavidowitz100/DATA606/main/FinalProject/vaccination-data.csv"
-url2 <- "https://raw.githubusercontent.com/adavidowitz100/DATA606/main/FinalProject/WHO-COVID-19-global-table-data.csv"
-raw_vax_data <- readr::read_csv(url1)
-raw_case_data <- readr::read_csv(url2)
+url <- "https://raw.githubusercontent.com/adavidowitz100/DATA606/main/FinalProject/email_data.csv"
 
-vax_data <- raw_vax_data |> dplyr::filter(DATE_UPDATED > "2022-09-01") |> # removing old data
-            dplyr::select("COUNTRY", contains("PER100")) |> # keeping only normalized vax counts
-            tidyr::drop_na() |>
-            dplyr::rename("country"="COUNTRY",
-                          "vax_100"="TOTAL_VACCINATIONS_PER100",
-                          "vax_1plus_100"="PERSONS_VACCINATED_1PLUS_DOSE_PER100",
-                          "vax_full_100"="PERSONS_FULLY_VACCINATED_PER100",
-                          "boost_100"="PERSONS_BOOSTER_ADD_DOSE_PER100")
+raw_email_data <- readr::read_csv(url, col_types = list(
+              Seniority = col_factor(),
+              Function = col_factor(),
+              "Subject Line" = col_character(),
+              "Hook 1" = col_character(),
+              "Z_Contact Status" = col_factor(),
+              "Email Opened" = col_date(format = "%m/%d/%Y"),
+              "Email Replied" = col_date(format = "%m/%d/%Y")
+))
 
-case_data <- raw_case_data |> dplyr::select("Name", contains("per 100")) |> #keeping only normalized counts
-                          dplyr::rename("country"="Name",
-                                        "case_100k"="Cases - cumulative total per 100000 population",
-                                        "case_7d_100k"="Cases - newly reported in last 7 days per 100000 population",
-                                        "death_100k"="Deaths - cumulative total per 100000 population",
-                                        "death_7d_100k"="Deaths - newly reported in last 7 days per 100000 population") |>
-                          dplyr::filter(case_7d_100k!=0 & death_7d_100k !=0) # removing unreliable data with no new cases or deaths
-
-df <- dplyr::inner_join(case_data,vax_data, by="country")
+df <- raw_email_data |> dplyr::rename(seniority = Seniority,
+                                      department = Function, 
+                                      subject = "Subject Line",
+                                      hook = "Hook 1", 
+                                      status = "Z_Contact Status",
+                                      opened_date = "Email Opened",
+                                      replied_date = "Email Replied") |>
+                      dplyr::mutate(opened = if_else(!is.na(opened_date), TRUE, FALSE)) |>
+                      dplyr::mutate(replied = if_else(!is.na(replied_date), TRUE, FALSE)) |>
+                      dplyr::mutate(days_diff = difftime(opened_date, replied_date, units = "days"))
 head(df)
+
 ```
 
 
 ### Research question 
 
-How influential on current Covid cases and deaths are historical vaccination rates?
-
+Does the recipient's seniority and department influence the effectiveness of this email marketing campaign? If the current campaign in not equally effective for all recipients the next campaign could be designed to be targeted more effectively by seniority and department.
 
 
 ### Cases 
 
-There are 74 cases. Subsetting was needed to remove countries that have not updated the WHO with vaccination data recently and countries with unreliably reported new case and death data.
-
+There are 1449 cases/observations representing marketing emails sent to specific people.
 
 
 ### Data collection 
 
-Local health organizations from countries around the world report Covid cases, deaths and vaccination data to the World Health Organization.
-
+Real sanitized email market research data was used.
 
 
 ### Type of study 
@@ -65,39 +67,30 @@ Local health organizations from countries around the world report Covid cases, d
 The data is observational in nature.
 
 
-
 ### Data Source 
 
-The data can be downloaded from the WHO at https://covid19.who.int/data
-
-
+The data is from a business to business email market research campaign. The data can be viewed on Github at https://raw.githubusercontent.com/adavidowitz100/DATA606/main/FinalProject/email_data.csv
 
 
 ### Dependent Variable
 
-"Deaths - newly reported in last 7 days" is a quantitative dependent variable.
-
+The dependent variables are "opened", "replied" and "days_diff" representing if an email was opened, responded to and the days between those events. 
 
 
 ### Independent Variable(s)
 
-The independent variables are:
-TOTAL_VACCINATIONS_PER100,	PERSONS_VACCINATED_1PLUS_DOSE_PER100,	PERSONS_FULLY_VACCINATED_PER100,	FIRST_VACCINE_DATE,	NUMBER_VACCINES_TYPES_USED, PERSONS_BOOSTER_ADD_DOSE_PER100
-
+The independent variables are department and seniority.
 
 
 ### Relevant summary statistics 
 
-**Provide summary statistics for each the variables. Also include appropriate visualizations related to your research question (e.g. scatter plot, boxplots, etc). This step requires the use of R, hence a code chunk is provided below. Insert more code chunks as needed.**
-
 ```{r}
+seniority_open_xtab <- xtabs(~ seniority + opened, data=df)
+seniority_open_xtab
+prop.table(seniority_open_xtab, 1)
+seniority_replied_xtab <- xtabs(~ seniority + replied, data=df)
+seniority_replied_xtab
+prop.table(seniority_replied_xtab, 1)
 
-ggplot(df, aes(x=log10(death_7d_100k))) + geom_histogram(binwidth = .05)
-
-plot_df <- dplyr::select(df,death_7d_100k, vax_100, vax_1plus_100, vax_full_100, boost_100)
-plot_df <- dplyr::mutate(plot_df, death_7d_100k=log10(death_7d_100k))
-GGally::ggpairs(plot_df)
-
-death_lm <- lm(log1p(death_7d_100k) ~ boost_100, data = df)
-summary(death_lm)
+ggplot(df, aes(x=days_diff)) + geom_histogram()
 ```
