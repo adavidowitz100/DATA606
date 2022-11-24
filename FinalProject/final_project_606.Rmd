@@ -3,23 +3,54 @@ title: DATA 606 Data Project Proposal
 author: Avery Davidowitz
 ---
 
+## Import Libraries
+
+```{r}
+library(tidyverse)
+library(GGally)
+```
+
+
 ### Data Preparation
 
-```{r setup, echo=TRUE, results='hide', warning=FALSE, message=FALSE}
+```{r}
 # load data
+url1 <- "https://raw.githubusercontent.com/adavidowitz100/DATA606/main/FinalProject/vaccination-data.csv"
+url2 <- "https://raw.githubusercontent.com/adavidowitz100/DATA606/main/FinalProject/WHO-COVID-19-global-table-data.csv"
+raw_vax_data <- readr::read_csv(url1)
+raw_case_data <- readr::read_csv(url2)
 
+vax_data <- raw_vax_data |> dplyr::filter(DATE_UPDATED > "2022-09-01") |> # removing old data
+            dplyr::select("COUNTRY", contains("PER100")) |> # keeping only normalized vax counts
+            tidyr::drop_na() |>
+            dplyr::rename("country"="COUNTRY",
+                          "vax_100"="TOTAL_VACCINATIONS_PER100",
+                          "vax_1plus_100"="PERSONS_VACCINATED_1PLUS_DOSE_PER100",
+                          "vax_full_100"="PERSONS_FULLY_VACCINATED_PER100",
+                          "boost_100"="PERSONS_BOOSTER_ADD_DOSE_PER100")
+
+case_data <- raw_case_data |> dplyr::select("Name", contains("per 100")) |> #keeping only normalized counts
+                          dplyr::rename("country"="Name",
+                                        "case_100k"="Cases - cumulative total per 100000 population",
+                                        "case_7d_100k"="Cases - newly reported in last 7 days per 100000 population",
+                                        "death_100k"="Deaths - cumulative total per 100000 population",
+                                        "death_7d_100k"="Deaths - newly reported in last 7 days per 100000 population") |>
+                          dplyr::filter(case_7d_100k!=0 & death_7d_100k !=0) # removing unreliable data with no new cases or deaths
+
+df <- dplyr::inner_join(case_data,vax_data, by="country")
+head(df)
 ```
 
 
 ### Research question 
 
-How influential on current Covid deaths are historical vaccinations?
+How influential on current Covid cases and deaths are historical vaccination rates?
 
 
 
 ### Cases 
 
-There are 239 cases.
+There are 74 cases. Subsetting was needed to remove countries that have not updated the WHO with vaccination data recently and countries with unreliably reported new case and death data.
 
 
 
@@ -61,4 +92,12 @@ TOTAL_VACCINATIONS_PER100,	PERSONS_VACCINATED_1PLUS_DOSE_PER100,	PERSONS_FULLY_V
 
 ```{r}
 
+ggplot(df, aes(x=log10(death_7d_100k))) + geom_histogram(binwidth = .05)
+
+plot_df <- dplyr::select(df,death_7d_100k, vax_100, vax_1plus_100, vax_full_100, boost_100)
+plot_df <- dplyr::mutate(plot_df, death_7d_100k=log10(death_7d_100k))
+GGally::ggpairs(plot_df)
+
+death_lm <- lm(log1p(death_7d_100k) ~ boost_100, data = df)
+summary(death_lm)
 ```
