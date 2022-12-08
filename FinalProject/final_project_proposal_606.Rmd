@@ -1,0 +1,105 @@
+---
+title: "DATA 606 Data Project Proposal"
+author: "Avery Davidowitz"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Import Libraries
+
+```{r}
+library(tidyverse)
+
+```
+
+
+### Data Preparation
+
+```{r}
+# load data
+url <- "https://raw.githubusercontent.com/adavidowitz100/DATA606/main/FinalProject/email_data.csv"
+
+raw_email_data <- readr::read_csv(url, col_types = list(
+              Seniority = col_factor(),
+              Function = col_factor(),
+              "Subject Line" = col_character(),
+              "Hook 1" = col_character(),
+              "Z_Contact Status" = col_factor(),
+              "Email Opened" = col_date(format = "%m/%d/%Y"),
+              "Email Replied" = col_date(format = "%m/%d/%Y")
+))
+
+df <- raw_email_data |> dplyr::rename(seniority = Seniority,
+                                      department = Function, 
+                                      subject = "Subject Line",
+                                      hook = "Hook 1", 
+                                      status = "Z_Contact Status",
+                                      opened_date = "Email Opened",
+                                      replied_date = "Email Replied") |>
+                      dplyr::mutate(opened = if_else(!is.na(opened_date), TRUE, FALSE)) |>
+                      dplyr::mutate(replied = if_else(!is.na(replied_date), TRUE, FALSE)) |>
+                      dplyr::mutate(days_diff = difftime(opened_date, replied_date, units = "days"))
+df$seniority[df$seniority=="Senior"] <- "Sr. Manager"
+df$seniority <- droplevels(df$seniority)
+head(df)
+
+```
+
+
+### Research question 
+
+Does the recipient's seniority and department influence the effectiveness of this email marketing campaign? If the current campaign in not equally effective for all recipients the next campaign could be designed to be targeted more effectively by seniority and department.
+
+
+### Cases 
+
+There are 1449 cases/observations representing marketing emails sent to specific people.
+
+
+### Data collection 
+
+Real sanitized email market research data was used.
+
+
+### Type of study 
+
+The data is observational in nature.
+
+
+### Data Source 
+
+The data is from a business to business email market research campaign. The data can be viewed on Github at https://raw.githubusercontent.com/adavidowitz100/DATA606/main/FinalProject/email_data.csv
+
+
+### Dependent Variable
+
+The dependent variables are "opened", "replied" and "days_diff" representing if an email was opened, responded to and the days between those events. 
+
+
+### Independent Variable(s)
+
+The independent variables are department and seniority.
+
+
+### Relevant summary statistics 
+
+```{r}
+seniority_open_xtab <- xtabs(~ seniority + opened, data=df)
+seniority_open_xtab
+prop.table(seniority_open_xtab, 1)
+seniority_replied_xtab <- xtabs(~ seniority + replied, data=df)
+seniority_replied_xtab
+prop.table(seniority_replied_xtab, 1)
+
+ggplot(df, aes(x=days_diff)) + geom_histogram()
+
+department_open_xtab <- xtabs(~ department + opened, data=df)
+department_open_xtab
+prop.table(department_open_xtab, 1)
+department_replied_xtab <- xtabs(~ department + replied, data=df)
+department_replied_xtab
+prop.table(department_replied_xtab, 1)
+```

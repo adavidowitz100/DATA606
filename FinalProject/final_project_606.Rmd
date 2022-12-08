@@ -1,22 +1,21 @@
 ---
-title: "DATA 606 Data Project Proposal"
+title: "Data 606 - Final Project"
 author: "Avery Davidowitz"
+date: "`r Sys.Date()`"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
-```
-
-## Import Libraries
-
-```{r}
 library(tidyverse)
-
+library(infer)
 ```
 
+## Abstract
 
-### Data Preparation
+Market research is a data and time intensive field where it is often difficult to determine effectiveness. The goal of this analysis is to identify potential areas of interest for further analysis. Email marketing data will be subset to determine if there are statistically significant differences in effectiveness by the recipient's seniority. Therefore, the data set is observational with the observations being specific emails sent. It has a sample size of 1449. The analysis method used will be a chi-squared test for the proportions with a p-value alpha of .1. The findings will dictate if further A/B testing is appropriate to try to improve specific seniority subsets or if the campaigns should be targeted to specific demographics. The analysis does indicate that there is not enough evidence to support any conclusion that seniority is a factor in opening or response rates.
+
+## Introduction
 
 ```{r}
 # load data
@@ -32,6 +31,8 @@ raw_email_data <- readr::read_csv(url, col_types = list(
               "Email Replied" = col_date(format = "%m/%d/%Y")
 ))
 
+head(raw_email_data)
+
 df <- raw_email_data |> dplyr::rename(seniority = Seniority,
                                       department = Function, 
                                       subject = "Subject Line",
@@ -42,55 +43,95 @@ df <- raw_email_data |> dplyr::rename(seniority = Seniority,
                       dplyr::mutate(opened = if_else(!is.na(opened_date), TRUE, FALSE)) |>
                       dplyr::mutate(replied = if_else(!is.na(replied_date), TRUE, FALSE)) |>
                       dplyr::mutate(days_diff = difftime(opened_date, replied_date, units = "days"))
+df$seniority[df$seniority=="Senior"] <- "Sr. Manager"
+df$seniority[df$seniority=="Vp"] <- "VP"
+df$seniority <- droplevels(df$seniority)
 head(df)
 
 ```
 
+## Summary Statistics
 
-### Research question 
-
-Does the recipient's seniority and department influence the effectiveness of this email marketing campaign? If the current campaign in not equally effective for all recipients the next campaign could be designed to be targeted more effectively by seniority and department.
-
-
-### Cases 
-
-There are 1449 cases/observations representing marketing emails sent to specific people.
-
-
-### Data collection 
-
-Real sanitized email market research data was used.
-
-
-### Type of study 
-
-The data is observational in nature.
-
-
-### Data Source 
-
-The data is from a business to business email market research campaign. The data can be viewed on Github at https://raw.githubusercontent.com/adavidowitz100/DATA606/main/FinalProject/email_data.csv
-
-
-### Dependent Variable
-
-The dependent variables are "opened", "replied" and "days_diff" representing if an email was opened, responded to and the days between those events. 
-
-
-### Independent Variable(s)
-
-The independent variables are department and seniority.
-
-
-### Relevant summary statistics 
+The below contingency tables and proportion tables describe the distribution of the data by seniority.
 
 ```{r}
-seniority_open_xtab <- xtabs(~ seniority + opened, data=df)
-seniority_open_xtab
-prop.table(seniority_open_xtab, 1)
-seniority_replied_xtab <- xtabs(~ seniority + replied, data=df)
-seniority_replied_xtab
-prop.table(seniority_replied_xtab, 1)
-
-ggplot(df, aes(x=days_diff)) + geom_histogram()
+open_xtab <- xtabs(~ seniority + opened, data=df)
+open_xtab
+open_prop <- prop.table(open_xtab, 1)
+open_prop
 ```
+
+```{r}
+replied_xtab <- xtabs(~ seniority + replied, data=df)
+replied_xtab
+replied_prop <- prop.table(replied_xtab, 1)
+replied_prop
+```
+
+Due to the conditions for the Chi Squared test, some seniority levels will have to be excluded due to small sample and response sizes. C suite and Partner do not have enough in the opened/false case and Head needs to be excluded for the replied/true case. Independence should be satisfied by the relative size of the study compared to the total population of supply chain and logistics professionals in the US (although it may be possible that two individuals known to each other may receive the emails this is unlikely enough to ignore).
+
+```{r}
+condition_pass_df <- df |> dplyr::filter(!seniority %in% c("C suite", "Partner", "Head"))
+condition_pass_df$seniority <- droplevels(condition_pass_df$seniority)
+
+pass_opened_xtab <- xtabs(~ seniority + opened, data=condition_pass_df)
+pass_opened_prop <- prop.table(pass_opened_xtab, 1)
+pass_opened_prop
+pass_replied_xtab <- xtabs(~ seniority + replied, data=condition_pass_df)
+pass_replied_prop <- prop.table(pass_replied_xtab, 1)
+pass_replied_prop
+```
+
+## Data Visualizations
+The below visualization seem to suggest that there is not much of a relationship between open rates and seniority. However, There does seem to be a more pronounced difference when looking at the differences at response rates.
+
+```{r}
+percent_opened_df <- as.data.frame(pass_opened_prop)
+percent_opened_df <- filter(percent_opened_df, opened==TRUE)
+percent_replied_df <- as.data.frame(pass_replied_prop)
+percent_replied_df <- filter(percent_replied_df, replied==TRUE)
+percent_df <- left_join(percent_replied_df, percent_opened_df, by="seniority")
+percent_df <- percent_df |> select(seniority, Freq.x, Freq.y) |> rename(replied=Freq.x, opened=Freq.y)
+
+ggplot(data=percent_df, aes(x=seniority, y=opened)) +  geom_bar(stat="identity")
+ggplot(data=percent_df, aes(x=seniority, y=replied)) +  geom_bar(stat="identity")
+
+```
+
+
+## Statistical Tests
+```{r}
+Chisq_hat <- condition_pass_df %>%
+  specify(formula = opened ~ seniority) %>% 
+  hypothesize(null = "independence") %>%
+  calculate(stat = "Chisq")
+null_dist <- condition_pass_df %>%
+  specify(opened ~ seniority) %>%
+  hypothesize(null = "independence") %>% 
+  generate(reps = 1000, type = "permute") %>% 
+  calculate(stat = "Chisq")
+visualize(null_dist) +
+  shade_p_value(obs_stat = Chisq_hat, direction = "greater")
+null_dist %>%
+  get_p_value(obs_stat = Chisq_hat, direction = "greater")
+```
+
+```{r}
+Chisq_hat <- condition_pass_df %>%
+  specify(formula = replied ~ seniority) %>% 
+  hypothesize(null = "independence") %>%
+  calculate(stat = "Chisq")
+null_dist <- condition_pass_df %>%
+  specify(replied ~ seniority) %>%
+  hypothesize(null = "independence") %>% 
+  generate(reps = 1000, type = "permute") %>% 
+  calculate(stat = "Chisq")
+visualize(null_dist) +
+  shade_p_value(obs_stat = Chisq_hat, direction = "greater")
+null_dist %>%
+  get_p_value(obs_stat = Chisq_hat, direction = "greater")
+```
+
+
+## Conclusion
+Since both of our p-values are very high and well over the alpha, we can conclude that there is not sufficient evidence to conclude that seniority and open and response rates are dependent. As a result, subsetting the marketing campaign by seniority does not appear to be a method to improve campaign performance. The fact that the one seniority level seemed to have a difference in response rate is quite possibly due to chance.
